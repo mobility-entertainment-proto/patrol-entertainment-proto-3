@@ -1,0 +1,667 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#057b7a">
+<title>パトログ 東海道五十三次</title>
+<style>
+  :root {
+    --primary: #057b7a;
+    --primary-dark: #04605f;
+    --ok: #2bb24c;
+    --navy: #214d60;
+    --text: #222;
+    --muted: #5f6b6b;
+    --line: #8a8a8a;
+    --bg: #f4f7f7;
+    --footer: #e6eeee;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", sans-serif;
+    color: var(--text); background: var(--bg);
+    display: flex; flex-direction: column; min-height: 100vh;
+  }
+  header {
+    background: var(--primary); color: #fff; display: flex; align-items: center; gap: 12px;
+    padding: 8px 12px; padding-top: calc(8px + env(safe-area-inset-top)); position: sticky; top: 0; z-index: 10;
+  }
+  .icon-btn { background: none; border: 0; color: inherit; padding: 4px; cursor: pointer; display: flex; }
+  .brand { font-size: 20px; flex: 1; letter-spacing: .5px; }
+  .head-icons { display: flex; gap: 6px; }
+
+  main { flex: 1; width: 100%; max-width: 480px; margin: 0 auto; padding: 24px 24px 40px; }
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* 入力画面（パトログと同じ構成） */
+  .point { text-align: center; margin: 8px 0 22px; }
+  .point .no { font-size: 26px; font-weight: 500; letter-spacing: 1px; }
+  .point .place { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .field { display: grid; grid-template-columns: 84px 1fr; align-items: end; gap: 12px; margin-bottom: 18px; }
+  .field label { text-align: right; font-size: 15px; padding-bottom: 6px; }
+  .field input, .field .value { font: inherit; font-size: 15px; color: var(--text); border: 0; border-bottom: 1px solid var(--line); background: transparent; padding: 6px 0; width: 100%; min-width: 0; border-radius: 0; outline: none; }
+  .field input:focus { border-bottom: 2px solid var(--primary); padding-bottom: 5px; }
+  .field .value { word-break: break-all; }
+  .actions { margin-top: 36px; display: grid; gap: 14px; }
+  .btn { display: flex; align-items: center; justify-content: center; gap: 10px; font: inherit; font-size: 20px; letter-spacing: 2px; height: 56px; border-radius: 4px; cursor: pointer; border: 2px solid var(--primary); width: 100%; }
+  .btn:active { transform: scale(.99); }
+  .btn-primary { background: var(--primary); color: #fff; box-shadow: 0 2px 4px rgba(0,0,0,.2); }
+  .btn-outline { background: #fff; color: var(--primary); }
+  .btn-sm { font-size: 16px; letter-spacing: 0; height: 48px; }
+
+  /* 完了画面 */
+  .done { text-align: center; padding-top: 18px; }
+  .stamp { display: inline-flex; align-items: center; gap: 6px; }
+  .stamp svg { width: 44px; height: 44px; }
+  .stamp .tag { background: var(--ok); color: #fff; font-size: 30px; font-weight: 700; border-radius: 8px; padding: 2px 18px; letter-spacing: 1px; animation: pop .45s cubic-bezier(.2,1.7,.4,1); }
+  .stamp .tag.off { background: var(--navy); }
+  .stamp path.check { stroke-dasharray: 40; stroke-dashoffset: 40; animation: draw .4s .15s ease-out forwards; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  @keyframes pop { from { transform: scale(.4); } }
+  .done .msg { font-size: 14px; margin: 12px 0 22px; }
+
+  /* ねぎらいカード */
+  .thanks { position: relative; background: #fff; border-radius: 16px; padding: 18px 18px 14px; text-align: left; box-shadow: 0 4px 14px rgba(5,123,122,.14); border-top: 6px solid var(--primary); animation: rise .6s .25s cubic-bezier(.2,1.2,.4,1) backwards; }
+  @keyframes rise { from { transform: translateY(24px); } }
+  .thanks .head { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .thanks .pic { width: 56px; height: 56px; flex: 0 0 56px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: #e3f2f1; }
+  .thanks .pic svg { width: 34px; height: 34px; }
+  .thanks .label { font-size: 12px; font-weight: 700; color: var(--primary); }
+  .thanks .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+  .thanks .chip { font-size: 11px; background: #eef4f4; color: var(--muted); border-radius: 999px; padding: 2px 8px; }
+  .thanks .words { font-size: 18px; font-weight: 700; line-height: 1.6; min-height: 58px; }
+  .thanks .more { display: block; margin: 8px 0 0 auto; background: none; border: 0; color: var(--primary); font: inherit; font-size: 12px; cursor: pointer; }
+
+  .summary { background: #fff; border-radius: 6px; padding: 14px 18px; text-align: left; font-size: 14px; margin: 18px 0 22px; box-shadow: 0 1px 2px rgba(0,0,0,.08); }
+  .summary dl { display: grid; grid-template-columns: 84px 1fr; gap: 8px 12px; margin: 0; }
+  .summary dt { color: var(--muted); }
+  .summary dd { margin: 0; word-break: break-all; }
+
+  /* 旅 */
+  .trip-link { width: 100%; display: flex; align-items: center; gap: 12px; margin-top: 22px; background: #fff; border: 1px solid #cfe3e2; border-radius: 12px; padding: 10px 12px; font: inherit; font-size: 14px; text-align: left; color: var(--text); cursor: pointer; }
+  .trip-link .seal-mini { width: 44px; height: 44px; flex: 0 0 44px; }
+  .trip-link > span:nth-child(2) { flex: 1; }
+  .trip-link small { color: var(--muted); }
+  .demo { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 14px; margin-top: 12px; }
+  .demo button { background: none; border: 0; color: #999; font-size: 12px; text-decoration: underline; cursor: pointer; }
+  .toast { text-align: center; font-size: 13px; color: var(--primary); font-weight: 700; min-height: 20px; margin-top: 6px; }
+
+  .journey { position: relative; border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 4px 14px rgba(5,123,122,.14); text-align: left; margin-bottom: 16px; }
+  .scene { position: relative; height: 190px; }
+  .scene svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .scene .walker { position: absolute; bottom: 14px; left: 42%; width: 46px; height: 64px; }
+  .scene .walker.walk { animation: walkin 1.6s ease-out; }
+  .scene .walker.walk svg { animation: bob .32s ease-in-out 5; }
+  @keyframes walkin { from { left: -14%; } }
+  @keyframes bob { 50% { transform: translateY(-4px) rotate(3deg); } }
+  .scene .walker svg { width: 100%; height: 100%; }
+  .seal { position: absolute; right: 14px; top: 12px; width: 92px; height: 92px; }
+  .seal.stamp { animation: stamp .55s .9s cubic-bezier(.2,1.6,.4,1) backwards; }
+  @keyframes stamp { 0% { transform: scale(2.4) rotate(-20deg); opacity: 0; } 60% { opacity: 1; } 100% { transform: scale(1) rotate(-8deg); } }
+  .seal svg { width: 100%; height: 100%; transform: rotate(-8deg); }
+  .arrive { padding: 12px 16px 14px; }
+  .arrive .pref { font-size: 12px; color: var(--muted); }
+  .arrive .name { font-size: 22px; font-weight: 800; margin: 2px 0; }
+  .arrive .name small { font-size: 13px; font-weight: 700; color: var(--primary); margin-left: 6px; }
+  .arrive .note { font-size: 13px; line-height: 1.6; color: #444; }
+  .road { display: flex; align-items: flex-start; gap: 0; margin: 12px 0 4px; overflow: hidden; }
+  .road .st { flex: 1; text-align: center; font-size: 11px; color: #9aa; position: relative; }
+  .road .st i { display: block; width: 12px; height: 12px; margin: 0 auto 4px; border-radius: 50%; background: #d5e2e2; border: 2px solid #fff; box-shadow: 0 0 0 1px #cfdcdc; position: relative; z-index: 1; }
+  .road .st::before { content: ""; position: absolute; top: 7px; left: -50%; width: 100%; height: 3px; background: #d5e2e2; }
+  .road .st:first-child::before { display: none; }
+  .road .st.past { color: var(--primary); }
+  .road .st.past i { background: var(--primary); }
+  .road .st.past::before, .road .st.now::before { background: var(--primary); }
+  .road .st.now { color: var(--text); font-weight: 800; }
+  .road .st.now i { transform: scale(1.4); background: #c0392b; box-shadow: 0 0 0 4px rgba(192,57,43,.2); }
+
+  .meter { background: linear-gradient(135deg, #057b7a, #0aa29f); color: #fff; border-radius: 14px; padding: 14px 18px 18px; margin-bottom: 16px; text-align: left; box-shadow: 0 6px 16px rgba(5,123,122,.3); }
+  .meter .label { font-size: 13px; opacity: .9; }
+  .meter .big { font-size: 34px; font-weight: 800; line-height: 1.2; }
+  .meter .big small { font-size: 15px; margin-left: 4px; }
+  .meter .track { position: relative; height: 10px; background: rgba(255,255,255,.25); border-radius: 5px; margin: 34px 12px 30px; }
+  .meter .fill { height: 100%; width: 0; border-radius: 5px; background: linear-gradient(90deg, #ffe08a, #fff6cf); transition: width 1s cubic-bezier(.3,1,.4,1); }
+  .meter .mk { position: absolute; top: 50%; transform: translate(-50%, -50%); text-align: center; }
+  .meter .mk b { display: block; width: 26px; height: 26px; border-radius: 50%; background: rgba(255,255,255,.3); border: 2px solid rgba(255,255,255,.6); font-size: 13px; line-height: 22px; transition: all .4s; }
+  .meter .mk.got b { background: #ffe08a; color: #6b4e00; border-color: #fff; }
+  .meter .mk span { position: absolute; top: 30px; left: 50%; transform: translateX(-50%); font-size: 10px; white-space: nowrap; }
+  .meter .next { font-size: 13px; font-weight: 700; color: #ffe08a; }
+
+  .celebrate { position: fixed; inset: 0; background: rgba(60,20,10,.84); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 40; color: #fff; text-align: center; padding: 24px; }
+  .celebrate.open { display: flex; }
+  .celebrate .seal-big svg { width: 100%; height: 100%; display: block; }
+  .celebrate .seal-big { width: 160px; height: 160px; animation: stamp .6s cubic-bezier(.2,1.6,.4,1); }
+  .celebrate h3 { font-size: 22px; margin: 14px 0 4px; color: #ffe08a; }
+  .celebrate p { font-size: 14px; margin: 0 0 20px; line-height: 1.6; }
+  .celebrate .btn { max-width: 240px; background: #ffe08a; color: #3d3000; border-color: #ffe08a; font-weight: 800; letter-spacing: 0; }
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+
+  /* 御朱印帳 */
+  .book-head { display: flex; justify-content: space-between; align-items: baseline; margin: 6px 0 4px; }
+  .book-head h2 { font-size: 20px; margin: 0; }
+  .book-head span { color: var(--muted); font-size: 13px; }
+  .book-sub { font-size: 13px; color: var(--muted); margin: 0 0 14px; }
+  .book { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; background: #fbf6ea; border-radius: 12px; padding: 10px; border: 1px solid #eadfc4; }
+  .book .cell { text-align: center; font-size: 9px; color: #8a7b5a; }
+  .book .cell svg { width: 100%; aspect-ratio: 1; display: block; }
+  .book .cell.empty svg { opacity: .18; filter: grayscale(1); }
+  .book .cell.cur svg { border-radius: 50%; box-shadow: 0 0 0 3px #fbf6ea, 0 0 0 5px #057b7a; }
+
+  footer { background: var(--footer); padding: 20px 20px calc(20px + env(safe-area-inset-bottom)); font-size: 14px; }
+  footer nav { display: flex; flex-wrap: wrap; gap: 8px 0; }
+  footer nav a { color: var(--primary-dark); text-decoration: none; padding: 0 12px; border-left: 1px solid #9bb; }
+  footer nav a:first-child { border-left: 0; padding-left: 0; }
+  footer .copy { color: #889; text-align: center; margin-top: 16px; font-size: 12px; }
+</style>
+</head>
+<body>
+  <header>
+    <button class="icon-btn" aria-label="メニュー"><svg width="26" height="26" viewBox="0 0 24 24" fill="currentColor"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg></button>
+    <div class="brand">パトログ</div>
+    <div class="head-icons">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 22a2 2 0 0 0 2-2h-4a2 2 0 0 0 2 2zm6-6V11c0-3.07-1.64-5.64-4.5-6.32V4a1.5 1.5 0 0 0-3 0v.68C7.63 5.36 6 7.92 6 11v5l-2 2v1h16v-1l-2-2z"/></svg>
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+    </div>
+  </header>
+
+  <main>
+    <!-- 入力画面 -->
+    <section class="screen active" id="screen-form">
+      <div class="point">
+        <div class="no" id="pointNo">15838</div>
+        <div class="place" id="pointPlace">A棟 1F 正面玄関</div>
+      </div>
+      <div class="field"><label>ユーザーID</label><div class="value" id="userId"></div></div>
+      <div class="field"><label>カード番号</label><div class="value">000304</div></div>
+      <div class="field"><label for="comment">コメント</label><input id="comment" type="text" autocomplete="off"></div>
+      <div class="actions">
+        <button class="btn btn-primary" id="btnOn">ON</button>
+        <button class="btn btn-outline" id="btnOff">OFF</button>
+      </div>
+      <button class="trip-link" data-go="book">
+        <span class="seal-mini" id="linkSeal"></span>
+        <span><b>東海道五十三次の旅</b><br><small id="linkTrip"></small></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" style="color:var(--muted)"><path d="M10 6 8.6 7.4 13.2 12l-4.6 4.6L10 18l6-6z"/></svg>
+      </button>
+      <div class="demo">
+        <button data-bulk="5">+5宿すすむ（デモ）</button>
+        <button data-bulk="10">+10宿すすむ（デモ）</button>
+        <button data-bulk="reset">はじめから（デモ）</button>
+      </div>
+      <div class="toast" id="toast"></div>
+    </section>
+
+    <!-- 完了画面 -->
+    <section class="screen" id="screen-done">
+      <div class="done">
+        <div class="stamp">
+          <svg viewBox="0 0 44 44"><path class="check" d="M6 23 l10 10 L38 9" fill="none" stroke="var(--ok)" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span class="tag" id="tag">ON</span>
+        </div>
+        <p class="msg">登録が完了しました。</p>
+
+        <div class="journey" id="journey">
+          <div class="scene" id="scene"></div>
+          <div class="arrive">
+            <div class="pref" id="stPref"></div>
+            <div class="name" id="stName"></div>
+            <div class="note" id="stNote"></div>
+            <div class="road" id="road"></div>
+          </div>
+        </div>
+
+        <div class="meter" id="meter">
+          <div class="label" id="meterLabel"></div>
+          <div class="big" id="meterBig"></div>
+          <div class="track" id="track"><div class="fill" id="fill"></div></div>
+          <div class="next" id="meterNext"></div>
+        </div>
+
+        <div class="thanks" id="thanks">
+          <div class="head">
+            <div class="pic" id="thanksPic"></div>
+            <div>
+              <div class="label" id="thanksLabel"></div>
+              <div class="chips" id="thanksChips"></div>
+            </div>
+          </div>
+          <div class="words" id="thanksWords"></div>
+          <button class="more" id="btnMore">ほかの言葉も見る ›</button>
+        </div>
+
+        <div class="summary">
+          <dl>
+            <dt>日時</dt><dd id="sumTime"></dd>
+            <dt>場所</dt><dd id="sumPlace"></dd>
+            <dt>本日の記録</dt><dd id="sumCount"></dd>
+          </dl>
+        </div>
+        <div style="display:grid;gap:12px">
+          <button class="btn btn-primary btn-sm" data-go="book">旅の記録（御朱印帳）を見る</button>
+          <button class="btn btn-outline btn-sm" data-go="form">戻る</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 御朱印帳 -->
+    <section class="screen" id="screen-book">
+      <div class="book-head"><h2>旅の記録</h2><span id="bookCount"></span></div>
+      <p class="book-sub" id="bookSub"></p>
+      <div class="book" id="book"></div>
+      <div style="display:grid;gap:10px;margin-top:18px">
+        <button class="btn btn-outline btn-sm" data-go="form">戻る</button>
+      </div>
+    </section>
+  </main>
+
+  <div class="celebrate" id="celebrate">
+    <div class="seal-big" id="celebrateSeal"></div>
+    <h3 id="celebrateTitle"></h3>
+    <p id="celebrateText"></p>
+    <button class="btn" id="btnCelebrate">ありがとう！</button>
+  </div>
+  <canvas id="confetti"></canvas>
+
+  <footer>
+    <nav><a href="#">利用規約</a><a href="#">プライバシーポリシー</a><a href="#">ウェブアクセシビリティ</a></nav>
+    <div class="copy">Prototype — 実際の登録は行われません</div>
+  </footer>
+
+<script>
+  const USER_ID = 'taro.yamada@example.com';
+  // 保存名はこのプロト専用にする（同じ github.io の下のプロトは保存場所を共有するため）
+  const RECENT_KEY = 'patrol3-thanks-recent-v1';
+  const TRIP_KEY = 'patrol3-tokaido-v1';
+  const RECENT_MAX = 15;   // 最近出た言葉はこの件数ぶん出さない
+  const PLACE = { lat: 35.681, lon: 139.767 };   // 天気を見る場所（東京）
+  const $ = (id) => document.getElementById(id);
+  $('userId').textContent = USER_ID;
+
+  // ---- ねぎらいの言葉 ----
+  // ON（上番・巡回）の時間帯別
+  const ON_BY_TIME = {
+    early:   ['朝早くからありがとうございます。今日も一日、よろしくお願いします。', '夜明け前からの見回り、本当にありがとうございます。', 'まだ静かな時間帯ですね。足元に気をつけて。', '早起きおつかれさまです。朝の空気、気持ちいいですね。', '一番乗りの見回り、ありがとうございます。', '朝の静けさを守ってくれてありがとうございます。'],
+    morning: ['おはようございます！今日もよろしくお願いします。', '朝の巡回ありがとうございます。いい一日になりますように。', '朝いちばんの確認、助かります。', 'みんなが出勤してくる前の確認、ありがとうございます。', '今日もいいスタートですね。', '朝の見回りで一日が安心して始まります。'],
+    day:     ['巡回ありがとうございます。いつも助かっています。', '昼間の見回り、おつかれさまです。こまめに休憩を。', '丁寧なチェック、ありがとうございます。', 'お昼ごはんはしっかり食べられましたか？', '人の多い時間帯の巡回、ありがとうございます。', 'いいペースですね。午後もよろしくお願いします。'],
+    evening: ['夕方の巡回ありがとうございます。暗くなる前の確認、助かります。', 'もうひと頑張り、無理せずいきましょう。', '一日の後半もありがとうございます。', '日が傾いてきましたね。足元に気をつけて。', '夕方の見回り、いつも助かっています。', 'あと少し、いっしょにがんばりましょう。'],
+    night:   ['夜の見回り、ありがとうございます。足元に気をつけて。', '夜遅くまでおつかれさまです。皆さんが安心して過ごせています。', '暗い中の確認、本当にありがとうございます。', '夜の静かな時間を守ってくれてありがとうございます。', 'ライトの準備は大丈夫ですか？気をつけて回ってくださいね。', '夜の巡回、心強いです。'],
+    late:    ['深夜の巡回、本当におつかれさまです。', 'みんなが眠っている間も守ってくれてありがとうございます。', '眠気に負けず、ありがとうございます。温かい飲み物でひと息を。', '深夜の見回りがあるから、みんな安心して眠れています。', '夜明けまであと少し。無理せずいきましょう。', '静かな夜をありがとうございます。'],
+  };
+  // ON でいつでも使える言葉
+  const ON_GENERAL = [
+    'いつもありがとうございます。あなたの巡回が現場を守っています。',
+    '確認ありがとうございます。今日もばっちりです。',
+    '一つひとつの確認が、みんなの安心につながっています。',
+    'ナイス巡回！この調子でいきましょう。',
+    '見えないところまで気を配ってくれてありがとうございます。',
+    '今日も現場の安全を守ってくれて、ありがとうございます。',
+    '無理せず、自分のペースでいきましょう。',
+    'しっかり記録できました。いつも正確でたすかります。',
+    '小さな異変に気づけるのは、毎日の巡回のおかげです。',
+    '背筋がのびる見回り、ありがとうございます。',
+    '疲れたら深呼吸をひとつ。いつもありがとうございます。',
+    '今日のあなたの見回りに、感謝しています。',
+  ];
+  // OFF（下番）
+  const OFF_WORDS = [
+    '今日も一日おつかれさまでした！ゆっくり休んでください。',
+    '無事に勤務完了ですね。本当にありがとうございました。',
+    'おつかれさまでした。気をつけてお帰りください。',
+    '今日も現場を守ってくれてありがとうございました。',
+    '勤務完了です。今日もよくがんばりました！',
+    'おつかれさまでした。おいしいごはんで、ゆっくり休んでくださいね。',
+    '今日の勤務が無事に終わりました。ありがとうございました。',
+    'しっかり休んで、また元気な顔を見せてください。',
+  ];
+  const OFF_LATE = ['夜通しの勤務、本当におつかれさまでした。しっかり休んでくださいね。'];
+  // 天気
+  const BY_WEATHER = {
+    rain: ['雨の中の巡回、ありがとうございます。滑りやすいので気をつけて。', '雨の日の見回り、本当におつかれさまです。', '足元がぬれていませんか？雨の日もありがとうございます。', '雨の日は視界が悪いので、ゆっくり安全に回ってくださいね。'],
+    hot:  ['暑い中ありがとうございます。こまめに水分補給を。', '猛暑の中の巡回、本当におつかれさまです。日陰で休憩してください。', '熱中症に気をつけて。冷たい飲み物でひと休みを。'],
+    cold: ['寒い中ありがとうございます。手袋で手元を温かくしてくださいね。', '冷え込む中の見回り、おつかれさまです。', '寒い日の巡回、本当にありがとうございます。温かくしてくださいね。'],
+    wind: ['風が強い中ありがとうございます。飛来物に気をつけて。'],
+  };
+  // 回数
+  const BY_COUNT = {
+    first: ['本日最初の記録です。今日もよろしくお願いします！'],
+    many:  (n) => [`本日${n}回目の記録です。積み重ねが現場の安心につながっています。`, `今日はもう${n}回目。いいペースです、無理せずいきましょう。`, `${n}回目の確認、おつかれさまです。`],
+  };
+
+  const ICONS = {
+    sun:   '<svg viewBox="0 0 24 24" fill="#f5a623"><circle cx="12" cy="12" r="5"/><g stroke="#f5a623" stroke-width="2" stroke-linecap="round"><path d="M12 1v3M12 20v3M1 12h3M20 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></g></svg>',
+    moon:  '<svg viewBox="0 0 24 24" fill="#5b6bbf"><path d="M20 15.5A8.5 8.5 0 0 1 8.5 4a8.5 8.5 0 1 0 11.5 11.5z"/></svg>',
+    rain:  '<svg viewBox="0 0 24 24"><path d="M7 15h10a4 4 0 0 0 .5-8A6 6 0 0 0 6 8a3.5 3.5 0 0 0 1 7z" fill="#9fb3c8"/><g stroke="#3b8fe0" stroke-width="2" stroke-linecap="round"><path d="M8 18l-1 3M12 18l-1 3M16 18l-1 3"/></g></svg>',
+    hot:   '<svg viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v8.3a5 5 0 1 0 6 0V5a3 3 0 0 0-3-3z" fill="#ffd1c7"/><circle cx="12" cy="17" r="3" fill="#e74c3c"/><rect x="11" y="7" width="2" height="9" fill="#e74c3c"/></svg>',
+    cold:  '<svg viewBox="0 0 24 24" stroke="#4aa3df" stroke-width="2" stroke-linecap="round"><path d="M12 2v20M3.3 7l17.4 10M3.3 17L20.7 7M9 4l3 2 3-2M9 20l3-2 3 2"/></svg>',
+    wind:  '<svg viewBox="0 0 24 24" fill="none" stroke="#7f8c8d" stroke-width="2" stroke-linecap="round"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h8"/></svg>',
+    heart: '<svg viewBox="0 0 24 24" fill="#e0a800"><path d="M12 21s-7.5-4.6-9.6-9.2C.9 8.4 3 5 6.4 5c2 0 3.6 1.1 4.4 2.6h2.4C14 6.1 15.6 5 17.6 5 21 5 23.1 8.4 21.6 11.8 19.5 16.4 12 21 12 21z"/></svg>',
+    shield:'<svg viewBox="0 0 24 24" fill="#057b7a"><path d="M12 2 4 5v6c0 5 3.4 9.7 8 11 4.6-1.3 8-6 8-11V5l-8-3zm-1.5 14.5-4-4 1.4-1.4 2.6 2.6 5.6-5.6 1.4 1.4-7 7z"/></svg>',
+    home:  '<svg viewBox="0 0 24 24" fill="#214d60"><path d="M12 3 2 12h3v8h5v-6h4v6h5v-8h3z"/></svg>',
+  };
+
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  function nowParts() {
+    const d = new Date();
+    const pad = (n) => String(n).padStart(2, '0');
+    return { d, ymd: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`, label: `${d.getFullYear()}/${pad(d.getMonth() + 1)}/${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}` };
+  }
+  function timeBand(h) {
+    if (h >= 4 && h < 7) return { key: 'early', name: '早朝', icon: 'sun' };
+    if (h >= 7 && h < 10) return { key: 'morning', name: '朝', icon: 'sun' };
+    if (h >= 10 && h < 15) return { key: 'day', name: '日中', icon: 'sun' };
+    if (h >= 15 && h < 19) return { key: 'evening', name: '夕方', icon: 'sun' };
+    if (h >= 19 && h < 23) return { key: 'night', name: '夜', icon: 'moon' };
+    return { key: 'late', name: '深夜', icon: 'moon' };
+  }
+
+  // 天気（Open-Meteo。取れなければ天気の言葉は使わない）
+  let weatherCache = null;
+  async function getWeather() {
+    if (weatherCache) return weatherCache;
+    try {
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${PLACE.lat}&longitude=${PLACE.lon}&current=temperature_2m,weather_code,wind_speed_10m&timezone=Asia%2FTokyo`;
+      const ctrl = new AbortController(); setTimeout(() => ctrl.abort(), 3000);
+      const c = (await (await fetch(url, { signal: ctrl.signal })).json()).current;
+      const code = c.weather_code;
+      const kind = (code >= 51 && code <= 67) || (code >= 80 && code <= 82) || code >= 95 ? 'rain'
+        : c.temperature_2m >= 30 ? 'hot' : c.temperature_2m <= 5 ? 'cold' : c.wind_speed_10m >= 30 ? 'wind' : null;
+      weatherCache = { kind, temp: Math.round(c.temperature_2m) };
+    } catch { weatherCache = { kind: null }; }
+    return weatherCache;
+  }
+
+  // 状況から言葉の候補を集めて、1つ選ぶ
+  // 最近出た言葉（このブラウザ内にだけ保存）
+  function loadRecent() { try { return JSON.parse(localStorage.getItem(RECENT_KEY)) || []; } catch { return []; } }
+  function remember(words) {
+    const r = [words, ...loadRecent().filter(x => x !== words)].slice(0, RECENT_MAX);
+    try { localStorage.setItem(RECENT_KEY, JSON.stringify(r)); } catch {}
+  }
+  // 最近出ていないものから選ぶ。全部出ていたら、いちばん前に出たものから選ぶ
+  function freshPick(items, key = (x) => x) {
+    const recent = loadRecent();
+    const fresh = items.filter(x => !recent.includes(key(x)));
+    if (fresh.length) return pick(fresh);
+    return [...items].sort((a, b) => recent.indexOf(key(b)) - recent.indexOf(key(a)))[0];
+  }
+
+  function chooseWords(ctx) {
+    let w;
+    {
+      const pool = [];
+      const add = (words, label, icon) => words.forEach(x => pool.push({ words: x, label, icon }));
+      if (ctx.kind === 'OFF') {
+        add(ctx.band.key === 'late' || ctx.band.key === 'early' ? [...OFF_LATE, ...OFF_WORDS] : OFF_WORDS, '勤務おつかれさまでした', 'home');
+      } else {
+        add(ON_BY_TIME[ctx.band.key], `${ctx.band.name}の巡回ありがとうございます`, ctx.band.icon);
+        add(ON_GENERAL, '巡回ありがとうございます', 'shield');
+        if (ctx.count === 1) add(BY_COUNT.first, '本日最初の記録', 'shield');
+        if (ctx.count >= 3) add(BY_COUNT.many(ctx.count), `本日${ctx.count}回目の記録`, 'shield');
+      }
+      if (ctx.weather.kind) add(BY_WEATHER[ctx.weather.kind], { rain: '雨の日もありがとうございます', hot: '暑い中ありがとうございます', cold: '寒い中ありがとうございます', wind: '風の強い日もありがとうございます' }[ctx.weather.kind], ctx.weather.kind);
+      w = freshPick(pool, x => x.words);
+    }
+    remember(w.words);
+    return w;
+  }
+
+  function renderThanks(w, ctx) {
+    $('thanksPic').innerHTML = ICONS[w.icon] || ICONS.shield;
+    $('thanksLabel').textContent = w.label;
+    const chips = [ctx.band.name, ctx.kind === 'ON' ? `本日${ctx.count}回目` : '勤務終了'];
+    if (ctx.weather.temp !== undefined) chips.push(`${ctx.weather.temp}℃`);
+    $('thanksChips').innerHTML = chips.map(c => `<span class="chip">${c}</span>`).join('');
+    $('thanksWords').textContent = w.words;
+  }
+
+  // ---------------- 東海道五十三次 ----------------
+  // kind: city / sea / fuji / mountain / river / town / goal（景色の描き分け）
+  const STATIONS = [
+    ['日本橋', '東京都', 'city', '東海道の起点。ここから京都・三条大橋まで約500kmの旅が始まります。'],
+    ['品川', '東京都', 'sea', '東海道で最初の宿場。海沿いのにぎやかな宿場町でした。'],
+    ['川崎', '神奈川県', 'river', '多摩川を渡った先の宿場。川崎大師への参詣でもにぎわいました。'],
+    ['神奈川', '神奈川県', 'sea', '海を見下ろす坂の上にあった宿場です。'],
+    ['保土ケ谷', '神奈川県', 'town', 'この先には「権太坂」という長い上り坂が待っています。'],
+    ['戸塚', '神奈川県', 'town', '江戸を朝に出た旅人が、最初に泊まることが多かった宿場です。'],
+    ['藤沢', '神奈川県', 'town', '遊行寺の門前町で、江の島への入り口でもありました。'],
+    ['平塚', '神奈川県', 'sea', '相模湾に近い宿場。高麗山が目印です。'],
+    ['大磯', '神奈川県', 'sea', '海辺の宿場。のちに海水浴場としても知られるようになりました。'],
+    ['小田原', '神奈川県', 'town', '小田原城の城下町。いよいよ箱根越えの手前です。'],
+    ['箱根', '神奈川県', 'mountain', '「天下の険」と呼ばれた難所。箱根の関所がありました。'],
+    ['三島', '静岡県', 'fuji', '箱根を越えたところにある、三嶋大社の門前町です。'],
+    ['沼津', '静岡県', 'fuji', '狩野川のほとりの宿場。ここから富士山がよく見えます。'],
+    ['原', '静岡県', 'fuji', '富士山を正面に望む、眺めのよい宿場です。'],
+    ['吉原', '静岡県', 'fuji', '富士山が左手に見える「左富士」の名所があります。'],
+    ['蒲原', '静岡県', 'sea', '駿河湾に面した宿場です。'],
+    ['由比', '静岡県', 'sea', '海と富士山を一緒に望む薩埵峠の名所があります。'],
+    ['興津', '静岡県', 'sea', '清見寺の門前にある、海辺の宿場です。'],
+    ['江尻', '静岡県', 'fuji', '三保の松原に近い宿場です。'],
+    ['府中', '静岡県', 'town', '駿府城の城下町。今の静岡市の中心です。'],
+    ['丸子', '静岡県', 'town', '東海道でいちばん小さな宿場のひとつ。とろろ汁が名物です。'],
+    ['岡部', '静岡県', 'mountain', '宇津ノ谷峠を越えた先の宿場です。'],
+    ['藤枝', '静岡県', 'town', '田中城の城下町としても栄えた宿場です。'],
+    ['島田', '静岡県', 'river', '大井川の手前の宿場。「越すに越されぬ大井川」の川越えを待つ旅人でにぎわいました。'],
+    ['金谷', '静岡県', 'river', '大井川を渡りきった先の宿場。ここから坂道が続きます。'],
+    ['日坂', '静岡県', 'mountain', '難所「小夜の中山」の峠を越えた先の宿場です。'],
+    ['掛川', '静岡県', 'town', '掛川城の城下町です。'],
+    ['袋井', '静岡県', 'town', '江戸からも京都からも27番目、ちょうど東海道のまん中の宿場です。'],
+    ['見附', '静岡県', 'town', '天竜川の手前にある宿場です。'],
+    ['浜松', '静岡県', 'town', '浜松城の城下町。東海道でも大きな宿場でした。'],
+    ['舞坂', '静岡県', 'sea', '浜名湖を舟で渡る「今切の渡し」の乗り場がありました。'],
+    ['新居', '静岡県', 'sea', '浜名湖を渡った先の宿場。新居関所がありました。'],
+    ['白須賀', '静岡県', 'sea', '遠州灘を見下ろす潮見坂の上の宿場です。'],
+    ['二川', '愛知県', 'town', '今も本陣の建物が残る宿場です。'],
+    ['吉田', '愛知県', 'river', '豊川に架かる吉田大橋のたもとの城下町。今の豊橋です。'],
+    ['御油', '愛知県', 'town', '松並木で知られる宿場です。'],
+    ['赤坂', '愛知県', 'town', '御油からわずか約1.7km。東海道でいちばん近い宿場どうしです。'],
+    ['藤川', '愛知県', 'town', '紫麦の里としても知られる宿場です。'],
+    ['岡崎', '愛知県', 'town', '徳川家康が生まれた岡崎城の城下町です。'],
+    ['池鯉鮒', '愛知県', 'town', '今の知立。馬市でにぎわった宿場です。'],
+    ['鳴海', '愛知県', 'town', '有松・鳴海絞りの産地として知られます。'],
+    ['宮', '愛知県', 'sea', '熱田神宮の門前町。ここから桑名へは「七里の渡し」で海を渡りました。'],
+    ['桑名', '三重県', 'sea', '七里の渡しの到着地。焼き蛤が名物です。'],
+    ['四日市', '三重県', 'town', '市場町としてにぎわった宿場です。'],
+    ['石薬師', '三重県', 'town', '石薬師寺の門前の宿場です。'],
+    ['庄野', '三重県', 'town', '歌川広重の「庄野 白雨」で知られる宿場です。'],
+    ['亀山', '三重県', 'town', '亀山城の城下町です。'],
+    ['関', '三重県', 'town', '江戸時代の町並みが今も残る宿場です。'],
+    ['坂下', '三重県', 'mountain', '難所・鈴鹿峠のふもとの宿場です。'],
+    ['土山', '滋賀県', 'mountain', '鈴鹿峠を越えた先、近江に入って最初の宿場です。'],
+    ['水口', '滋賀県', 'town', '水口城の城下町。かんぴょうが名物です。'],
+    ['石部', '滋賀県', 'town', '京都を朝に出た旅人が、最初に泊まることが多かった宿場です。'],
+    ['草津', '滋賀県', 'town', '中山道との分かれ道。今も本陣が残っています。'],
+    ['大津', '滋賀県', 'sea', '琵琶湖のほとりの、東海道最後の宿場です。'],
+    ['京都・三条大橋', '京都府', 'goal', '東海道の終点。おつかれさまでした！'],
+  ];
+  const LAST = STATIONS.length - 1;
+  // バロメーターの節目
+  const MILESTONES = [{ at: 10, icon: '⛰', name: '箱根' }, { at: 23, icon: '🌊', name: '大井川' }, { at: 41, icon: '⛩', name: '宮' }, { at: LAST, icon: '🏯', name: '京都' }];
+  const stNo = (i) => i === 0 ? '起点' : i === LAST ? '終点' : `第${i}宿`;
+
+  // 旅の記録（このブラウザ内にだけ保存）：pos = 今いる場所、lap = 何周目、stamps = 押したスタンプの数、days = 日ごとの巡回数
+  const freshTrip = () => ({ pos: 0, lap: 1, laps: 0, stamps: { 0: 1 }, days: {} });
+  function loadTrip() { try { const v = JSON.parse(localStorage.getItem(TRIP_KEY)); if (v && v.stamps) return { ...freshTrip(), ...v }; } catch {} return freshTrip(); }
+  let trip = loadTrip();
+  function saveTrip() { try { localStorage.setItem(TRIP_KEY, JSON.stringify(trip)); } catch {} }
+  // 1宿すすむ。京都に着いた次は、日本橋から次の周を始める
+  function advance() {
+    if (trip.pos === LAST) { trip.pos = 0; trip.lap++; trip.stamps[0] = (trip.stamps[0] || 0) + 1; }
+    trip.pos++;
+    trip.stamps[trip.pos] = (trip.stamps[trip.pos] || 0) + 1;
+    if (trip.pos === LAST) trip.laps++;
+    return trip.pos;
+  }
+
+  function sealSVG(i, opts = {}) {
+    const name = STATIONS[i][0].replace('・三条大橋', '');
+    const chars = [...name];
+    const fs = chars.length >= 4 ? 13 : chars.length === 3 ? 16 : 19;
+    const y0 = 50 - (chars.length - 1) * fs * .55;
+    const red = opts.gold ? '#b8860b' : '#c0392b';
+    return `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="50" cy="50" r="46" fill="none" stroke="${red}" stroke-width="5"/>
+      <circle cx="50" cy="50" r="39" fill="none" stroke="${red}" stroke-width="1.5"/>
+      <text x="50" y="22" font-size="9" font-weight="700" text-anchor="middle" fill="${red}" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${stNo(i)}</text>
+      ${chars.map((c, k) => `<text x="50" y="${y0 + k * fs * 1.1 + fs * .4}" font-size="${fs}" font-weight="800" text-anchor="middle" fill="${red}" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">${c}</text>`).join('')}
+      <text x="50" y="88" font-size="8" text-anchor="middle" fill="${red}" font-family="'Hiragino Mincho ProN','Yu Mincho',serif">東海道</text>
+    </svg>`;
+  }
+
+  // 景色（種類と昼夜で描き分け）
+  function sceneSVG(kind, night, withFuji) {
+    const sky = night ? ['#1a2347', '#3b3f6e'] : ['#f6d7a7', '#fbeedc'];
+    const hill = night ? '#2c3a3a' : '#7aa57a', hill2 = night ? '#22302f' : '#5d8a64';
+    let mid = '';
+    const fuji = `<path d="M150 150 L250 48 L350 150z" fill="${night ? '#3a4a6a' : '#5a7bb5'}"/><path d="M228 70 L250 48 L272 70 L262 66 L256 74 L248 66 L240 74 L234 66z" fill="#fff"/>`;
+    if (kind === 'fuji' || withFuji) mid = fuji;
+    if (kind === 'mountain') mid = `<path d="M-10 150 L90 50 L170 120 L240 40 L360 150z" fill="${night ? '#2a3838' : '#6b8f71'}"/><path d="M60 150 L150 80 L230 150z" fill="${hill2}"/>`;
+    const ground = kind === 'sea'
+      ? `<rect y="130" width="400" height="70" fill="${night ? '#1d3557' : '#3d7fbf'}"/>${[0, 1, 2, 3, 4, 5, 6].map(k => `<path d="M${k * 60 - 10} 150 q15 -10 30 0 t30 0" fill="none" stroke="#fff" stroke-width="3" opacity=".7"/>`).join('')}<path d="M0 175 q100 -12 200 0 t200 0 V200 H0z" fill="${night ? '#4a4535' : '#e9d8a6'}"/>`
+      : kind === 'river'
+      ? `<rect y="140" width="400" height="60" fill="${hill}"/><path d="M0 165 q100 -14 200 0 t200 0 v20 q-100 14 -200 0 t-200 0z" fill="${night ? '#1d3557' : '#6fb7e0'}"/>`
+      : `<rect y="140" width="400" height="60" fill="${hill}"/>`;
+    const pines = [40, 330].map(x => `<g transform="translate(${x} 128)"><rect x="-3" y="10" width="6" height="22" fill="#6b4226"/><path d="M-22 14 h44 l-22 -16z M-18 4 h36 l-18 -14z M-12 -6 h24 l-12 -12z" fill="${night ? '#1e3b2e' : '#2f6b45'}"/></g>`).join('');
+    const town = kind === 'town' || kind === 'city' || kind === 'goal'
+      ? [60, 120, 270, 330].map((x, k) => `<g transform="translate(${x} ${118 - (k % 2) * 4})"><rect x="-22" y="6" width="44" height="22" fill="${night ? '#5a4a3a' : '#c9a77c'}"/><path d="M-28 8 L0 -8 L28 8z" fill="${night ? '#2b2b33' : '#4a4a55'}"/>${night ? '<rect x="-6" y="12" width="12" height="9" fill="#ffd56b"/>' : '<rect x="-6" y="12" width="12" height="9" fill="#8a6a4a"/>'}</g>`).join('') : '';
+    const bridge = kind === 'city' || kind === 'goal' || kind === 'river'
+      ? `<path d="M110 150 q90 -40 180 0" fill="none" stroke="#8a5a2b" stroke-width="7"/><g stroke="#8a5a2b" stroke-width="4">${[130, 160, 190, 220, 250, 270].map(x => `<line x1="${x}" y1="${150 - Math.sin((x - 110) / 180 * Math.PI) * 28}" x2="${x}" y2="${150 - Math.sin((x - 110) / 180 * Math.PI) * 28 + 14}"/>`).join('')}</g>` : '';
+    const sunmoon = night ? '<circle cx="110" cy="40" r="16" fill="#fff4c2"/><circle cx="104" cy="36" r="14" fill="#1a2347"/>' : '<circle cx="110" cy="42" r="18" fill="#e8553f" opacity=".9"/>';
+    const stars = night ? [[40, 30], [100, 20], [180, 40], [260, 18], [300, 60]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="1.5" fill="#fff"/>`).join('') : '';
+    return `<svg class="bg" viewBox="0 0 400 200" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg">
+      <defs><linearGradient id="sky${night ? 'n' : 'd'}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient></defs>
+      <rect width="400" height="200" fill="url(#sky${night ? 'n' : 'd'})"/>${stars}${sunmoon}
+      <path d="M0 145 q60 -40 130 -10 q70 -30 140 0 q70 -30 130 -5 V200 H0z" fill="${hill2}" opacity=".6"/>
+      ${mid}${ground}${bridge}${town}${pines}
+      <path d="M0 192 q200 -10 400 0 V200 H0z" fill="${night ? '#3a3528' : '#d8c08c'}"/>
+    </svg>`;
+  }
+  const WALKER = `<svg viewBox="0 0 46 64" xmlns="http://www.w3.org/2000/svg"><path d="M2 20 Q23 4 44 20 Z" fill="#c9a24a" stroke="#8a6a2a" stroke-width="1.5"/><circle cx="23" cy="24" r="6" fill="#f2d2b0"/><path d="M14 30 h18 l3 18 h-24z" fill="#2f5d8a"/><path d="M32 32 l8 10" stroke="#f2d2b0" stroke-width="4" stroke-linecap="round"/><line x1="40" y1="30" x2="40" y2="62" stroke="#8a5a2b" stroke-width="2.5"/><path d="M16 48 l-3 14 M30 48 l4 14" stroke="#333" stroke-width="4" stroke-linecap="round"/><path d="M10 30 l-6 4 v10 l6 2z" fill="#8a6a4a"/></svg>`;
+  const INN = `<svg viewBox="0 0 46 64" xmlns="http://www.w3.org/2000/svg"><rect x="4" y="22" width="38" height="36" fill="#6b4a32"/><path d="M0 24 L23 6 L46 24z" fill="#2b2b33"/><rect x="10" y="32" width="11" height="12" fill="#ffd56b"/><rect x="25" y="32" width="11" height="12" fill="#ffd56b"/><rect x="18" y="46" width="10" height="12" fill="#3a2a1a"/><circle cx="23" cy="18" r="3" fill="#e74c3c"/></svg>`;
+
+  function renderRoad(pos) {
+    const from = Math.max(0, Math.min(pos - 2, LAST - 4));
+    $('road').innerHTML = STATIONS.slice(from, from + 5).map((st, k) => {
+      const i = from + k;
+      return `<div class="st ${i < pos ? 'past' : ''} ${i === pos ? 'now' : ''}"><i></i>${st[0].replace('・三条大橋', '')}</div>`;
+    }).join('');
+  }
+  function renderMeter(before, after) {
+    $('meterLabel').textContent = `${trip.lap}周目 ・ 日本橋から京都まで`;
+    $('meterBig').innerHTML = `${after}<small>/ ${LAST} 宿</small>`;
+    $('track').querySelectorAll('.mk').forEach(e => e.remove());
+    MILESTONES.forEach(m => $('track').insertAdjacentHTML('beforeend', `<div class="mk${before >= m.at ? ' got' : ''}" data-at="${m.at}" style="left:${m.at / LAST * 100}%"><b>${m.icon}</b><span>${m.name}</span></div>`));
+    const set = (v) => {
+      $('fill').style.width = `${v / LAST * 100}%`;
+      $('track').querySelectorAll('.mk').forEach(e => e.classList.toggle('got', v >= Number(e.dataset.at)));
+      const n = MILESTONES.find(m => v < m.at);
+      $('meterNext').textContent = v >= LAST ? '東海道五十三次、踏破！' : `${n.name}まで あと${n.at - v}宿 ・ 京都まで あと${LAST - v}宿`;
+    };
+    set(before);
+    setTimeout(() => set(after), 600);
+  }
+  function renderJourney(kind, moved) {
+    const i = trip.pos, st = STATIONS[i], night = kind === 'OFF';
+    // 三島〜江尻のあたりは、海や町の景色にも富士山を描く
+    $('scene').innerHTML = sceneSVG(st[2], night, i >= 11 && i <= 18) + `<div class="walker ${moved ? 'walk' : ''}">${night ? INN : WALKER}</div><div class="seal ${moved ? 'stamp' : ''}">${sealSVG(i)}</div>`;
+    $('stPref').textContent = `${st[1]} ・ ${stNo(i)}`;
+    $('stName').innerHTML = night ? `今夜は${st[0]}${i && i < LAST ? '宿' : ''}で一泊 <small>本日の旅はここまで</small>` : `${st[0]}${i && i < LAST ? '宿' : ''}に到着！ <small>${trip.stamps[i] > 1 ? `${trip.stamps[i]}回目の訪問` : 'はじめての訪問'}</small>`;
+    $('stNote').textContent = night ? `${st[3]} また次の巡回で、${STATIONS[Math.min(i + 1, LAST)][0]}を目指しましょう。` : st[3];
+    renderRoad(i);
+  }
+  function renderLink() {
+    $('linkSeal').innerHTML = sealSVG(trip.pos);
+    $('linkTrip').textContent = `${trip.lap}周目 ・ いまは${STATIONS[trip.pos][0]}（${stNo(trip.pos)}）`;
+  }
+  function renderBook() {
+    const got = STATIONS.filter((_, i) => trip.stamps[i]).length;
+    $('bookCount').textContent = `${got} / ${STATIONS.length} 印`;
+    $('bookSub').textContent = `${trip.lap}周目の旅の途中 ・ 踏破 ${trip.laps}回 ・ いまは${STATIONS[trip.pos][0]}`;
+    $('book').innerHTML = STATIONS.map((st, i) => `<div class="cell ${trip.stamps[i] ? '' : 'empty'} ${i === trip.pos ? 'cur' : ''}">${sealSVG(i, { gold: trip.laps > 0 && i === LAST })}${trip.stamps[i] > 1 ? `×${trip.stamps[i]}` : '&nbsp;'}</div>`).join('');
+  }
+
+  function celebrate(title, text, i) {
+    $('celebrateSeal').innerHTML = sealSVG(i, { gold: i === LAST });
+    $('celebrateTitle').textContent = title;
+    $('celebrateText').textContent = text;
+    $('celebrate').classList.add('open');
+    confetti(i === LAST ? 260 : 120);
+  }
+  $('btnCelebrate').addEventListener('click', () => $('celebrate').classList.remove('open'));
+  function confetti(count) {
+    const cv = $('confetti'), ctx = cv.getContext('2d');
+    cv.width = innerWidth; cv.height = innerHeight;
+    const colors = ['#c0392b', '#ffe08a', '#057b7a', '#f39c12', '#ffffff'];
+    const ps = Array.from({ length: count }, () => ({ x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5, w: 6 + Math.random() * 6, h: 8 + Math.random() * 8, vy: 2 + Math.random() * 3, vx: -1.5 + Math.random() * 3, r: Math.random() * 3, vr: -.2 + Math.random() * .4, c: colors[Math.floor(Math.random() * colors.length)] }));
+    const start = performance.now();
+    (function frame(t) {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      for (const p of ps) { p.x += p.vx; p.y += p.vy; p.r += p.vr; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h * Math.abs(Math.cos(p.r))); ctx.restore(); }
+      if (t - start < 4000) requestAnimationFrame(frame); else ctx.clearRect(0, 0, cv.width, cv.height);
+    })(start);
+  }
+  function milestoneHit(before, after) {
+    if (after === LAST) return celebrate('東海道五十三次 踏破！', `日本橋から京都・三条大橋まで、${trip.laps}回目の踏破です。本当におつかれさまでした！次の巡回から${trip.lap + 1}周目の旅が始まります。`, LAST);
+    const m = MILESTONES.find(x => before < x.at && after >= x.at);
+    if (m) celebrate(`${m.name}に到着！`, `ここまで${after}宿。いつもの巡回の積み重ねで、ここまで来ました。`, m.at);
+  }
+
+  function go(name) {
+    if (name === 'book') renderBook();
+    if (name === 'form') renderLink();
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === `screen-${name}`));
+    window.scrollTo(0, 0);
+  }
+  document.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => go(b.dataset.go)));
+  renderLink();
+
+  // 入力画面のデモ：まとめて進む
+  document.querySelectorAll('[data-bulk]').forEach(b => b.addEventListener('click', () => {
+    if (b.dataset.bulk === 'reset') {
+      if (!confirm('旅をはじめからにしますか？')) return;
+      trip = freshTrip(); saveTrip(); renderLink(); $('toast').textContent = '日本橋に戻りました';
+      return;
+    }
+    const before = trip.pos === LAST ? 0 : trip.pos;
+    for (let i = 0; i < Number(b.dataset.bulk); i++) { advance(); if (trip.pos === LAST) break; }
+    saveTrip(); renderLink();
+    $('toast').textContent = `${STATIONS[trip.pos][0]}まで進みました（${trip.lap}周目 ${trip.pos}/${LAST}宿）`;
+    milestoneHit(before, trip.pos);
+  }));
+
+  let lastCtx = null;
+  async function register(kind) {
+    const t = nowParts();
+    // ON = 1宿すすむ、OFF = 今いる宿で一泊
+    const before = trip.pos === LAST && kind === 'ON' ? 0 : trip.pos;
+    if (kind === 'ON') { advance(); trip.days[t.ymd] = (trip.days[t.ymd] || 0) + 1; }
+    saveTrip();
+    const count = trip.days[t.ymd] || 0;
+    $('tag').textContent = kind;
+    $('tag').classList.toggle('off', kind === 'OFF');
+    $('sumTime').textContent = t.label;
+    $('sumPlace').textContent = `${$('pointPlace').textContent}（No.${$('pointNo').textContent}）`;
+    $('sumCount').textContent = kind === 'ON' ? `本日${count}回目の巡回` : `本日の巡回 ${count}回`;
+    renderJourney(kind, kind === 'ON');
+    renderMeter(before, trip.pos);
+    if (kind === 'ON') setTimeout(() => milestoneHit(before, trip.pos), 1800);
+    $('thanksWords').textContent = '';
+    $('thanksLabel').textContent = '';
+    $('thanksChips').innerHTML = '';
+    $('thanksPic').innerHTML = ICONS.shield;
+    document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === 'screen-done'));
+    window.scrollTo(0, 0);
+    const weather = await getWeather();
+    lastCtx = { kind, band: timeBand(t.d.getHours()), count, weather };
+    renderThanks(chooseWords(lastCtx), lastCtx);
+  }
+
+  $('btnOn').addEventListener('click', () => register('ON'));
+  $('btnOff').addEventListener('click', () => register('OFF'));
+  $('btnMore').addEventListener('click', () => { if (lastCtx) renderThanks(chooseWords(lastCtx), lastCtx); });
+
+</script>
+</body>
+</html>
